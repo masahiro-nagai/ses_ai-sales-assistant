@@ -1,0 +1,5 @@
+{
+  "name": "SES/AI Sales Assistant",
+  "description": "AI-powered personalized sending flow for SES/AI talent sales",
+  "requestFramePermissions": []
+}
