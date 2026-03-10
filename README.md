@@ -1,4 +1,4 @@
-# SES AI Sales Assistant
+# AI Sales Assistant
 
 営業活動を効率化するための Next.js + Gemini AI Webアプリケーションです。  
 企業分析・候補者マッチング・パーソナライズ送信文の自動生成を一気通貫でサポートします。
