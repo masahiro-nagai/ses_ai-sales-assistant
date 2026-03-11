@@ -77,7 +77,7 @@ npm install
 
 # 2. 環境変数の設定
 cp .env.example .env.local
-# .env.local を開き NEXT_PUBLIC_GEMINI_API_KEY に取得した API キーを設定
+# .env.local を開き GEMINI_API_KEY に取得した API キーを設定
 
 # 3. 開発サーバーの起動
 npm run dev
@@ -91,7 +91,8 @@ npm run dev
 
 | 変数名 | 説明 |
 |--------|------|
-| `NEXT_PUBLIC_GEMINI_API_KEY` | Google Gemini API キー（必須） |
+| `GEMINI_API_KEY` | Google Gemini API キー（必須。バックエンド専用のためフロントエンドから露出不可） |
+| `NEXT_PUBLIC_FIREBASE_*` | Firebase 接続用の設定値 |
 
 ---
 
