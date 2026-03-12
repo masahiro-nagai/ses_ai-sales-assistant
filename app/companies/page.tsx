@@ -173,9 +173,9 @@ export default function CompaniesPage() {
               <div>
                 <h2 className="text-lg font-bold text-gray-900">企業を追加</h2>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  {step === 'url' && 'Step 1: 企業URLを入力してAI検索'}
+                  {step === 'url' && 'Step 1: 企業URLを入力してAI検索 または 手入力'}
                   {step === 'loading' && 'Step 2: AI が企業情報を調査中...'}
-                  {step === 'review' && 'Step 3: 取得情報を確認・編集して登録'}
+                  {step === 'review' && 'Step 3: 情報を確認・編集して登録'}
                 </p>
               </div>
               <button onClick={handleCloseModal} className="text-gray-400 hover:text-gray-600">
@@ -221,6 +221,17 @@ export default function CompaniesPage() {
                     AI検索
                   </button>
                 </div>
+                <div className="flex items-center gap-3">
+                  <hr className="flex-1 border-gray-200" />
+                  <span className="text-xs text-gray-400">または</span>
+                  <hr className="flex-1 border-gray-200" />
+                </div>
+                <button
+                  onClick={() => { setForm(emptyForm()); setStep('review'); }}
+                  className="w-full py-2 text-sm border border-gray-300 rounded-md text-gray-600 hover:bg-gray-50"
+                >
+                  URLなしで手入力する
+                </button>
               </div>
             )}
 
