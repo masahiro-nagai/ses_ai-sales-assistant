@@ -69,7 +69,7 @@ export async function POST(req: Request) {
 `;
 
                 const response = await ai.models.generateContent({
-                    model: 'gemini-3.1-pro-preview',
+                    model: 'gemini-3.1-flash-lite-preview',
                     contents: prompt,
                     config: {
                         tools: [{ googleSearch: {} }],
@@ -126,7 +126,7 @@ ${candidate.portfolio ? `- ポートフォリオ情報: ${candidate.portfolio}` 
 `;
 
                 const response = await ai.models.generateContent({
-                    model: 'gemini-3.1-pro-preview',
+                    model: 'gemini-3.1-flash-lite-preview',
                     contents: prompt,
                 });
                 resultText = response.text || '';
@@ -178,7 +178,7 @@ ${candidate.portfolio ? `- ポートフォリオ情報: ${candidate.portfolio}` 
 `;
 
                 const response = await ai.models.generateContent({
-                    model: 'gemini-3.1-pro-preview',
+                    model: 'gemini-3.1-flash-lite-preview',
                     contents: prompt,
                 });
                 resultText = response.text || '';
@@ -217,7 +217,7 @@ ${url}
 不明な項目は空文字列にしてください。JSONのみ返してください。
 `;
                 const response = await ai.models.generateContent({
-                    model: 'gemini-2.0-flash',
+                    model: 'gemini-3.1-flash-lite-preview',
                     contents: prompt,
                     config: {
                         tools: [{ googleSearch: {} }],
