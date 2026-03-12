@@ -104,11 +104,25 @@ export type ProjectCase = {
   updatedAt: string;
 };
 
+export type Proposal = {
+  id: string;
+  caseId: string;
+  candidateId: string;
+  status: '提案中' | '面談調整中' | '面談済み' | '内内決定' | '不合格' | '取り下げ';
+  writer: string;
+  proposalMethod: string;
+  proposalAmount: string;
+  recommendationText: string;
+  memo: string;
+  updatedAt: string;
+};
+
 interface AppState {
   companies: Company[];
   candidates: Candidate[];
   logs: SendLog[];
   cases: ProjectCase[];
+  proposals: Proposal[];
   isInitialized: boolean;
   initializeListeners: () => void;
   addCompany: (company: Company) => Promise<void>;
@@ -123,6 +137,9 @@ interface AppState {
   addCase: (c: ProjectCase) => Promise<void>;
   updateCase: (id: string, c: Partial<ProjectCase>) => Promise<void>;
   deleteCase: (id: string) => Promise<void>;
+  addProposal: (p: Proposal) => Promise<void>;
+  updateProposal: (id: string, p: Partial<Proposal>) => Promise<void>;
+  deleteProposal: (id: string) => Promise<void>;
 }
 
 export const useAppStore = create<AppState>()((set, get) => ({
@@ -130,6 +147,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
   candidates: [],
   logs: [],
   cases: [],
+  proposals: [],
   isInitialized: false,
 
   initializeListeners: () => {
@@ -158,6 +176,12 @@ export const useAppStore = create<AppState>()((set, get) => ({
       onSnapshot(casesQuery, (snapshot) => {
         const cases = snapshot.docs.map(doc => doc.data() as ProjectCase);
         set({ cases });
+      });
+
+      const proposalsQuery = query(collection(db, 'proposals'));
+      onSnapshot(proposalsQuery, (snapshot) => {
+        const proposals = snapshot.docs.map(doc => doc.data() as Proposal);
+        set({ proposals });
       });
 
       set({ isInitialized: true });
@@ -291,6 +315,36 @@ export const useAppStore = create<AppState>()((set, get) => ({
     } catch (error) {
       console.error('Error deleting case:', error);
       set((state) => ({ cases: state.cases.filter((c) => c.id !== id) }));
+    }
+  },
+
+  addProposal: async (p) => {
+    try {
+      await setDoc(doc(db, 'proposals', p.id), p);
+    } catch (error) {
+      console.error('Error adding proposal:', error);
+      set((state) => ({ proposals: [...state.proposals, p] }));
+    }
+  },
+
+  updateProposal: async (id, proposalUpdate) => {
+    try {
+      const currentState = get().proposals.find(p => p.id === id);
+      if (!currentState) return;
+      const updated = { ...currentState, ...proposalUpdate, updatedAt: new Date().toISOString() };
+      await setDoc(doc(db, 'proposals', id), updated, { merge: true });
+    } catch (error) {
+      console.error('Error updating proposal:', error);
+      set((state) => ({ proposals: state.proposals.map((p) => p.id === id ? { ...p, ...proposalUpdate } : p) }));
+    }
+  },
+
+  deleteProposal: async (id) => {
+    try {
+      await deleteDoc(doc(db, 'proposals', id));
+    } catch (error) {
+      console.error('Error deleting proposal:', error);
+      set((state) => ({ proposals: state.proposals.filter((p) => p.id !== id) }));
     }
   },
 }));
