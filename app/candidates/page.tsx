@@ -187,6 +187,7 @@ export default function CandidatesPage() {
                 <th className="px-6 py-3">主要スキル</th>
                 <th className="px-6 py-3">添付資料</th>
                 <th className="px-6 py-3">状態</th>
+                <th className="px-6 py-3">最終更新</th>
                 <th className="px-6 py-3">アクション</th>
               </tr>
             </thead>
@@ -221,6 +222,9 @@ export default function CandidatesPage() {
                     }`}>
                       {candidate.status}
                     </span>
+                  </td>
+                  <td className="px-6 py-4 text-xs text-gray-500">
+                    {candidate.updatedAt ? new Date(candidate.updatedAt).toLocaleString('ja-JP', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—'}
                   </td>
                   <td className="px-6 py-4">
                     <button

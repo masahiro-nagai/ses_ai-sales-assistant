@@ -155,6 +155,7 @@ export default function CompaniesPage() {
                 <th className="px-6 py-3">業界/規模</th>
                 <th className="px-6 py-3">注力領域</th>
                 <th className="px-6 py-3">優先度</th>
+                <th className="px-6 py-3">最終更新</th>
                 <th className="px-6 py-3">アクション</th>
               </tr>
             </thead>
@@ -180,6 +181,9 @@ export default function CompaniesPage() {
                     }`}>
                       {company.priority}
                     </span>
+                  </td>
+                  <td className="px-6 py-4 text-xs text-gray-500">
+                    {company.updatedAt ? new Date(company.updatedAt).toLocaleString('ja-JP', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—'}
                   </td>
                   <td className="px-6 py-4">
                     <button
