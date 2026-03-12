@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useAppStore } from '@/lib/store';
 import { Candidate } from '@/lib/store';
 import { generateRecommendationFromInterview } from '@/lib/gemini';
-import { Plus, Search, X, Pencil, Sparkles, Loader2, Check, Copy } from 'lucide-react';
+import { Plus, Search, X, Pencil, Sparkles, Loader2, Check, Copy, ChevronRight } from 'lucide-react';
 
 const PREFECTURES = [
   '北海道','青森県','岩手県','宮城県','秋田県','山形県','福島県',
@@ -256,10 +256,124 @@ function CandidateForm({
   );
 }
 
+// ── 候補者サマリーモーダル ──
+const STATUS_COLORS: Record<string, string> = {
+  '可': 'bg-emerald-100 text-emerald-700',
+  '保留': 'bg-yellow-100 text-yellow-700',
+  '停止': 'bg-red-100 text-red-700',
+};
+
+function CandidateSummaryModal({
+  candidate,
+  onClose,
+  onEdit,
+}: {
+  candidate: Candidate;
+  onClose: () => void;
+  onEdit: () => void;
+}) {
+  const formatDate = (v: string) => {
+    if (!v) return '—';
+    try { return new Date(v).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' }); }
+    catch { return v; }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+        {/* ヘッダー */}
+        <div className="flex justify-between items-start p-6 border-b border-gray-100">
+          <div className="flex-1 pr-4">
+            <h2 className="text-lg font-bold text-gray-900">{candidate.name}</h2>
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
+              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[candidate.status] || 'bg-gray-100 text-gray-600'}`}>
+                {candidate.status}
+              </span>
+              {candidate.type && <span className="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600">{candidate.type}</span>}
+              {candidate.location && <span className="text-xs text-gray-500">{candidate.location}</span>}
+            </div>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 flex-shrink-0"><X className="h-5 w-5" /></button>
+        </div>
+
+        {/* サマリー本体 */}
+        <div className="p-6 space-y-5">
+          {/* 単価・稼働可能日 */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-gray-50 rounded-lg p-3">
+              <div className="text-xs text-gray-500 mb-1">希望単価</div>
+              <div className="text-sm font-semibold text-gray-900">{formatPrice(candidate.priceType ?? '', candidate.desiredPrice)}</div>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-3">
+              <div className="text-xs text-gray-500 mb-1">稼働可能日</div>
+              <div className="text-sm font-semibold text-gray-900">{formatDate(candidate.availableFrom)}</div>
+            </div>
+          </div>
+
+          {/* 得意領域 */}
+          {candidate.strongArea && (
+            <div>
+              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">得意領域</div>
+              <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{candidate.strongArea}</p>
+            </div>
+          )}
+
+          {/* 主要スキル */}
+          {candidate.mainSkills && (
+            <div>
+              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">主要スキル</div>
+              <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{candidate.mainSkills}</p>
+            </div>
+          )}
+
+          {/* 実績 */}
+          {(candidate.achievement1 || candidate.achievement2) && (
+            <div>
+              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">実績</div>
+              {candidate.achievement1 && <p className="text-sm text-gray-700 mb-1">・{candidate.achievement1}</p>}
+              {candidate.achievement2 && <p className="text-sm text-gray-700">・{candidate.achievement2}</p>}
+            </div>
+          )}
+
+          {/* AI関連経験 */}
+          {candidate.aiExperience && (
+            <div>
+              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">AI関連経験</div>
+              <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{candidate.aiExperience}</p>
+            </div>
+          )}
+
+          {/* 推薦テキスト */}
+          {candidate.recommendationText && (
+            <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-3">
+              <div className="text-xs font-semibold text-indigo-600 mb-2">推薦テキスト</div>
+              <p className="text-sm text-indigo-900 whitespace-pre-wrap leading-relaxed">{candidate.recommendationText}</p>
+            </div>
+          )}
+        </div>
+
+        {/* フッター */}
+        <div className="flex justify-between items-center px-6 pb-6">
+          <button onClick={onClose} className="px-4 py-2 text-sm border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">閉じる</button>
+          <button
+            onClick={onEdit}
+            className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-md font-medium flex items-center gap-2"
+          >
+            <Pencil className="h-4 w-4" />人材情報編集
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── メインページ ──
 export default function CandidatesPage() {
   const { candidates, addCandidate, updateCandidate } = useAppStore();
   const [searchTerm, setSearchTerm] = useState('');
+
+  const [summaryCandidate, setSummaryCandidate] = useState<Candidate | null>(null);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [addForm, setAddForm] = useState(emptyForm());
@@ -287,6 +401,7 @@ export default function CandidatesPage() {
   };
 
   const handleOpenEdit = (candidate: Candidate) => {
+    setSummaryCandidate(null);
     setEditTarget(candidate);
     const { id: _id, updatedAt: _updatedAt, ...rest } = candidate;
     setEditForm({ ...rest, priceType: rest.priceType ?? '' });
@@ -334,14 +449,18 @@ export default function CandidatesPage() {
                 <th className="px-6 py-3">稼働可能日</th>
                 <th className="px-6 py-3">状態</th>
                 <th className="px-6 py-3">最終更新</th>
-                <th className="px-6 py-3">アクション</th>
               </tr>
             </thead>
             <tbody>
               {filteredCandidates.map((candidate) => (
                 <tr key={candidate.id} className="border-b border-gray-100 hover:bg-gray-50">
                   <td className="px-6 py-4">
-                    <div className="font-medium text-gray-900">{candidate.name}</div>
+                    <button
+                      onClick={() => setSummaryCandidate(candidate)}
+                      className="font-medium text-indigo-600 hover:text-indigo-800 hover:underline text-left"
+                    >
+                      {candidate.name}
+                    </button>
                     <div className="text-xs text-gray-500 mt-1">{candidate.type}</div>
                   </td>
                   <td className="px-6 py-4 text-gray-700 text-xs">{candidate.location || '—'}</td>
@@ -363,17 +482,21 @@ export default function CandidatesPage() {
                   <td className="px-6 py-4 text-xs text-gray-500">
                     {candidate.updatedAt ? new Date(candidate.updatedAt).toLocaleString('ja-JP', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—'}
                   </td>
-                  <td className="px-6 py-4">
-                    <button onClick={() => handleOpenEdit(candidate)} className="text-indigo-600 hover:text-indigo-900 font-medium text-sm flex items-center gap-1">
-                      <Pencil className="h-3.5 w-3.5" />詳細・編集
-                    </button>
-                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* サマリーモーダル */}
+      {summaryCandidate && (
+        <CandidateSummaryModal
+          candidate={summaryCandidate}
+          onClose={() => setSummaryCandidate(null)}
+          onEdit={() => handleOpenEdit(summaryCandidate)}
+        />
+      )}
 
       {/* 追加モーダル */}
       {showAddModal && (
