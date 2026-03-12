@@ -283,6 +283,55 @@ HR Tech SaaSにおける開発経験：物流DXの自社サービス開発と親
                 break;
             }
 
+            case 'parseCase': {
+                const { summaryText } = payload;
+                const prompt = `
+あなたはSES/IT人材エージェントの営業アシスタントです。
+以下の案件サマリーテキストを読み解き、各項目に当てはまる情報を抽出してJSONで返してください。
+
+【案件サマリー】
+${summaryText}
+
+【抽出するフィールドと説明】
+- title: 案件名・役職名（例: "ソフトウェアエンジニア", "Ruby on Railsエンジニア"）
+- description: 案件内容・業務詳細
+- requiredSkills: 必須スキル（箇条書きやテキストそのまま）
+- preferredSkills: 尚可スキル・歓迎スキル
+- budget: 単価の上限金額（数値のみ、円単位。例: 900000。範囲がある場合は上限のみ）
+- settlementRange: 精算幅（例: "140h-180h"）
+- workLocation: 勤務地
+- workStyle: 稼働形態。"フルリモート"・"一部リモート"・"常駐" のいずれか、不明なら空文字
+- workDays: 稼働日数（例: "週5日"、"週3〜5日"）
+- workHours: 勤務時間（例: "9:30〜18:30"）
+- startDate: 開始時期（例: "即日"、"相談可能"）
+- period: 期間（例: "長期"、"3ヶ月〜"）
+- techStack: 開発環境・技術スタック（テキストそのまま）
+- commercialFlow: 商流（例: "エンド→弊社"）
+- interviewCount: 面談回数（例: "1回"、"1回（上位同席）"）
+- headcount: 募集人数（例: "1名"、"2名"）
+- paymentTerms: 支払いサイト
+- ageLimit: 年齢制限（例: "40代前半まで"）
+- foreignOk: 外国籍可否。"可"・"不可"・"条件付き" のいずれか、不明なら空文字
+- memo: 備考・補足（単価の下限、特記事項など。単価幅がある場合は "単価80〜90万円（スキル見合い）" のように記載）
+
+【出力ルール】
+- 必ずJSONのみを返してください（マークダウンコードブロックなし）
+- 情報がない項目は空文字列 "" にしてください
+- budgetは数値文字列（例: "900000"）、その他はすべてstring
+`;
+                const response = await ai.models.generateContent({
+                    model: 'gemini-3.1-flash-lite-preview',
+                    contents: prompt,
+                });
+                const rawText = response.text || '';
+                const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+                if (!jsonMatch) {
+                    return NextResponse.json({ error: 'AI response did not contain valid JSON' }, { status: 500 });
+                }
+                const parsed = JSON.parse(jsonMatch[0]);
+                return NextResponse.json({ parsed });
+            }
+
             default:
                 return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
         }
