@@ -65,3 +65,22 @@ export const generateMessage = async (
   const data = await res.json();
   return data.text;
 };
+
+export const extractCompanyFromUrl = async (url: string) => {
+  const res = await fetch('/api/gemini', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      action: 'extractCompany',
+      payload: { url }
+    })
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(errorData.error || 'Failed to extract company info');
+  }
+
+  const data = await res.json();
+  return data.extracted;
+};

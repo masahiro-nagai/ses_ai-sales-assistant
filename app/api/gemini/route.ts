@@ -185,6 +185,54 @@ ${candidate.portfolio ? `- ポートフォリオ情報: ${candidate.portfolio}` 
                 break;
             }
 
+            case 'extractCompany': {
+                const { url } = payload;
+                const prompt = `
+あなたはSES/AI人材営業のための企業情報収集アシスタントです。
+以下のURLの企業について、GoogleSearchを使ってWebサイトを調査し、企業情報を収集してください。
+
+【企業URL】
+${url}
+
+【出力ルール】
+必ず以下のキーを持つJSONのみを返してください。説明文やMarkdownは不要です。JSONのみ出力してください。
+
+{
+  "name": "企業名",
+  "industry": "業界（例：IT・SaaS, 製造業, 金融 など）",
+  "size": "従業員規模（例：50名, 300名, 1000名以上 など）",
+  "location": "本社所在地（例：東京都渋谷区）",
+  "summary": "事業概要を2〜3文で",
+  "product": "主なサービス・製品を簡潔に",
+  "focusArea": "現在注力している領域（例：AI活用, グローバル展開, DX推進）",
+  "recruitingRoles": "採用中の職種（例：エンジニア, 営業, PM）",
+  "techStack": "技術スタック（例：React, Python, AWS）",
+  "recentTopics": "最近のニュースや動向を1〜2点",
+  "keyPerson": "代表者名や担当者名（分かれば）",
+  "urlRecruit": "採用ページURL（分かれば）",
+  "urlService": "サービスページURL（分かれば）",
+  "urlNews": "ニュース・プレスリリースページURL（分かれば）"
+}
+
+不明な項目は空文字列にしてください。JSONのみ返してください。
+`;
+                const response = await ai.models.generateContent({
+                    model: 'gemini-2.0-flash',
+                    contents: prompt,
+                    config: {
+                        tools: [{ googleSearch: {} }],
+                    }
+                });
+                const raw = response.text || '';
+                // JSON部分だけ抽出
+                const jsonMatch = raw.match(/\{[\s\S]*\}/);
+                if (!jsonMatch) {
+                    return NextResponse.json({ error: 'AIからJSON形式の回答が得られませんでした' }, { status: 500 });
+                }
+                const extracted = JSON.parse(jsonMatch[0]);
+                return NextResponse.json({ extracted });
+            }
+
             default:
                 return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
         }
