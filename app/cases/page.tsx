@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useAppStore } from '@/lib/store';
 import { ProjectCase } from '@/lib/store';
 import { parseCaseFromText } from '@/lib/gemini';
-import { Plus, Search, X, Pencil, Sparkles, Loader2, PenLine } from 'lucide-react';
+import { Plus, Search, X, Pencil, Sparkles, Loader2, PenLine, ChevronRight } from 'lucide-react';
 
 const emptyForm = (): Omit<ProjectCase, 'id' | 'updatedAt'> => ({
   title: '',
@@ -36,6 +36,108 @@ const STATUS_COLORS: Record<string, string> = {
   '提案済み': 'bg-yellow-100 text-yellow-700',
   '終了': 'bg-gray-100 text-gray-500',
 };
+
+const formatBudget = (b: string) => {
+  const n = parseInt(b, 10);
+  return isNaN(n) ? '—' : `¥${n.toLocaleString('ja-JP')}`;
+};
+
+// ── 案件サマリーモーダル ──
+function SummaryModal({
+  caseItem,
+  onClose,
+  onEdit,
+}: {
+  caseItem: ProjectCase;
+  onClose: () => void;
+  onEdit: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+        {/* ヘッダー */}
+        <div className="flex justify-between items-start p-6 border-b border-gray-100">
+          <div className="flex-1 pr-4">
+            <h2 className="text-lg font-bold text-gray-900">{caseItem.title}</h2>
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
+              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[caseItem.status] || 'bg-gray-100 text-gray-700'}`}>
+                {caseItem.status}
+              </span>
+              {caseItem.workStyle && (
+                <span className="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600">{caseItem.workStyle}</span>
+              )}
+              {caseItem.startDate && (
+                <span className="text-xs text-gray-500">開始: {caseItem.startDate}</span>
+              )}
+            </div>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 flex-shrink-0"><X className="h-5 w-5" /></button>
+        </div>
+
+        {/* サマリー本体 */}
+        <div className="p-6 space-y-5">
+          {/* 単価・開始時期 */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-gray-50 rounded-lg p-3">
+              <div className="text-xs text-gray-500 mb-1">単価（上限）</div>
+              <div className="text-sm font-semibold text-gray-900">{formatBudget(caseItem.budget)}</div>
+              {caseItem.settlementRange && <div className="text-xs text-gray-500 mt-0.5">精算: {caseItem.settlementRange}</div>}
+            </div>
+            <div className="bg-gray-50 rounded-lg p-3">
+              <div className="text-xs text-gray-500 mb-1">開始時期</div>
+              <div className="text-sm font-semibold text-gray-900">{caseItem.startDate || '—'}</div>
+              {caseItem.period && <div className="text-xs text-gray-500 mt-0.5">期間: {caseItem.period}</div>}
+            </div>
+          </div>
+
+          {/* 業務内容 */}
+          {caseItem.description && (
+            <div>
+              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">業務内容</div>
+              <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{caseItem.description}</p>
+            </div>
+          )}
+
+          {/* 必須スキル */}
+          {caseItem.requiredSkills && (
+            <div>
+              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">必須スキル</div>
+              <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{caseItem.requiredSkills}</p>
+            </div>
+          )}
+
+          {/* 尚可スキル */}
+          {caseItem.preferredSkills && (
+            <div>
+              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">尚可スキル</div>
+              <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{caseItem.preferredSkills}</p>
+            </div>
+          )}
+
+          {/* 備考 */}
+          {caseItem.memo && (
+            <div className="bg-yellow-50 border border-yellow-100 rounded-lg p-3">
+              <div className="text-xs font-semibold text-yellow-700 mb-1">備考</div>
+              <p className="text-sm text-yellow-800 whitespace-pre-wrap">{caseItem.memo}</p>
+            </div>
+          )}
+        </div>
+
+        {/* フッター */}
+        <div className="flex justify-between items-center px-6 pb-6">
+          <button onClick={onClose} className="px-4 py-2 text-sm border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">閉じる</button>
+          <button
+            onClick={onEdit}
+            className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-md font-medium flex items-center gap-2"
+          >
+            <Pencil className="h-4 w-4" />案件詳細・編集
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ── フォーム ──
 function CaseForm({
@@ -98,7 +200,7 @@ function CaseForm({
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">稼働日数</label>
-        <input type="text" name="workDays" value={form.workDays} onChange={onChange} placeholder="例: 週5日、週3〜5日"
+        <input type="text" name="workDays" value={form.workDays} onChange={onChange} placeholder="例: 週5日"
           className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
       </div>
       <div>
@@ -108,7 +210,7 @@ function CaseForm({
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">開始時期</label>
-        <input type="text" name="startDate" value={form.startDate} onChange={onChange} placeholder="例: 即日、2025年4月〜"
+        <input type="text" name="startDate" value={form.startDate} onChange={onChange} placeholder="例: 即日"
           className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
       </div>
       <div>
@@ -118,7 +220,7 @@ function CaseForm({
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">開発環境・技術スタック</label>
-        <textarea name="techStack" value={form.techStack} onChange={onChange} rows={2} placeholder="例: Ruby on Rails, React, AWS, PostgreSQL"
+        <textarea name="techStack" value={form.techStack} onChange={onChange} rows={2} placeholder="例: Ruby on Rails, React, AWS"
           className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
       </div>
       <div>
@@ -133,7 +235,7 @@ function CaseForm({
       </div>
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">募集人数</label>
-        <input type="text" name="headcount" value={form.headcount} onChange={onChange} placeholder="例: 1名、2名"
+        <input type="text" name="headcount" value={form.headcount} onChange={onChange} placeholder="例: 1名"
           className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
       </div>
       <div>
@@ -176,16 +278,10 @@ function CaseForm({
   );
 }
 
-// ── 追加モーダル（3ステップ） ──
+// ── 追加モーダル ──
 type AddStep = 'select' | 'text' | 'loading' | 'review';
 
-function AddModal({
-  onClose,
-  onSave,
-}: {
-  onClose: () => void;
-  onSave: (form: Omit<ProjectCase, 'id' | 'updatedAt'>) => Promise<void>;
-}) {
+function AddModal({ onClose, onSave }: { onClose: () => void; onSave: (form: Omit<ProjectCase, 'id' | 'updatedAt'>) => Promise<void> }) {
   const [step, setStep] = useState<AddStep>('select');
   const [summaryText, setSummaryText] = useState('');
   const [form, setForm] = useState(emptyForm());
@@ -216,45 +312,35 @@ function AddModal({
     setSaving(false);
   };
 
-  const stepLabel = {
-    select: 'Step 1: 入力方法を選択',
-    text: 'Step 2: 案件サマリーを貼り付け',
-    loading: 'AI が解析中...',
-    review: step === 'review' && summaryText ? 'Step 3: 内容を確認・修正して登録' : '手入力で登録',
-  }[step];
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
-        {/* ヘッダー */}
         <div className="flex justify-between items-center p-6 border-b border-gray-100">
           <div>
             <h2 className="text-lg font-bold text-gray-900">案件を追加</h2>
-            <p className="text-xs text-gray-500 mt-0.5">{stepLabel}</p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {step === 'select' && 'Step 1: 入力方法を選択'}
+              {step === 'text' && 'Step 2: 案件サマリーを貼り付け'}
+              {step === 'loading' && 'AI が解析中...'}
+              {step === 'review' && (summaryText ? 'Step 3: 内容を確認・修正して登録' : '手入力で登録')}
+            </p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
         </div>
 
-        {/* Step 1: 入力方法選択 */}
         {step === 'select' && (
           <div className="p-6 space-y-4">
             <p className="text-sm text-gray-600">案件の登録方法を選択してください。</p>
-            <button
-              onClick={() => setStep('text')}
-              className="w-full flex items-center gap-4 p-4 border-2 border-indigo-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-400 transition-colors text-left"
-            >
+            <button onClick={() => setStep('text')} className="w-full flex items-center gap-4 p-4 border-2 border-indigo-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-400 transition-colors text-left">
               <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
                 <Sparkles className="h-5 w-5 text-indigo-600" />
               </div>
               <div>
                 <div className="text-sm font-semibold text-gray-900">案件サマリーから自動入力</div>
-                <div className="text-xs text-gray-500 mt-0.5">メール等の案件テキストを貼り付けるとAIが各項目を自動入力します</div>
+                <div className="text-xs text-gray-500 mt-0.5">テキストを貼り付けるとAIが各項目を自動入力します</div>
               </div>
             </button>
-            <button
-              onClick={() => { setForm(emptyForm()); setStep('review'); }}
-              className="w-full flex items-center gap-4 p-4 border-2 border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-colors text-left"
-            >
+            <button onClick={() => { setForm(emptyForm()); setStep('review'); }} className="w-full flex items-center gap-4 p-4 border-2 border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-colors text-left">
               <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
                 <PenLine className="h-5 w-5 text-gray-600" />
               </div>
@@ -266,44 +352,31 @@ function AddModal({
           </div>
         )}
 
-        {/* Step 2: テキスト貼り付け */}
         {step === 'text' && (
           <div className="p-6 space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">案件サマリーテキスト</label>
-              <textarea
-                value={summaryText}
-                onChange={(e) => setSummaryText(e.target.value)}
-                rows={10}
+              <textarea value={summaryText} onChange={(e) => setSummaryText(e.target.value)} rows={10}
                 placeholder="メールや資料から案件情報をそのままコピー＆ペーストしてください..."
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
               {error && <p className="text-xs text-red-600 mt-2">{error}</p>}
-              <p className="text-xs text-gray-400 mt-1">案件名・必須スキル・単価・勤務形態などAIが自動で抽出します</p>
             </div>
             <div className="flex justify-between gap-3">
               <button onClick={() => setStep('select')} className="px-4 py-2 text-sm border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">← 戻る</button>
-              <button
-                onClick={handleParse}
-                disabled={!summaryText.trim()}
-                className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-md font-medium flex items-center gap-2 disabled:opacity-50"
-              >
+              <button onClick={handleParse} disabled={!summaryText.trim()} className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-md font-medium flex items-center gap-2 disabled:opacity-50">
                 <Sparkles className="h-4 w-4" />AI解析して自動入力
               </button>
             </div>
           </div>
         )}
 
-        {/* Loading */}
         {step === 'loading' && (
           <div className="p-12 flex flex-col items-center justify-center text-center">
             <Loader2 className="h-10 w-10 text-indigo-500 animate-spin mb-4" />
             <p className="text-sm font-medium text-gray-700">AIが案件情報を解析中...</p>
-            <p className="text-xs text-gray-400 mt-1">各項目を自動で抽出しています</p>
           </div>
         )}
 
-        {/* Step 3: 確認・修正フォーム */}
         {step === 'review' && (
           <>
             {summaryText && (
@@ -315,9 +388,7 @@ function AddModal({
             )}
             <CaseForm form={form} onChange={handleChange} />
             <div className="flex justify-between gap-3 px-6 pb-6">
-              <button onClick={() => setStep(summaryText ? 'text' : 'select')} className="px-4 py-2 text-sm border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
-                ← 戻る
-              </button>
+              <button onClick={() => setStep(summaryText ? 'text' : 'select')} className="px-4 py-2 text-sm border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">← 戻る</button>
               <div className="flex gap-2">
                 <button onClick={onClose} className="px-4 py-2 text-sm border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">キャンセル</button>
                 <button onClick={handleSubmit} disabled={saving || !form.title.trim()} className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-md font-medium disabled:opacity-50">
@@ -337,15 +408,13 @@ export default function CasesPage() {
   const { cases, addCase, updateCase } = useAppStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
-
+  const [summaryCase, setSummaryCase] = useState<ProjectCase | null>(null);
   const [editTarget, setEditTarget] = useState<ProjectCase | null>(null);
   const [editForm, setEditForm] = useState<Omit<ProjectCase, 'id' | 'updatedAt'>>(emptyForm());
   const [editSaving, setEditSaving] = useState(false);
 
   const filteredCases = cases.filter(c =>
-    c.title.includes(searchTerm) ||
-    c.requiredSkills.includes(searchTerm) ||
-    c.techStack.includes(searchTerm)
+    c.title.includes(searchTerm) || c.requiredSkills.includes(searchTerm) || c.techStack.includes(searchTerm)
   );
 
   const handleAddSave = async (form: Omit<ProjectCase, 'id' | 'updatedAt'>) => {
@@ -354,23 +423,21 @@ export default function CasesPage() {
   };
 
   const handleOpenEdit = (c: ProjectCase) => {
+    setSummaryCase(null);
     setEditTarget(c);
     const { id: _id, updatedAt: _updatedAt, ...rest } = c;
     setEditForm(rest);
   };
+
   const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setEditForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+
   const handleEditSubmit = async () => {
     if (!editTarget || !editForm.title.trim()) return;
     setEditSaving(true);
     await updateCase(editTarget.id, editForm);
     setEditSaving(false);
     setEditTarget(null);
-  };
-
-  const formatBudget = (b: string) => {
-    const n = parseInt(b, 10);
-    return isNaN(n) ? '—' : `¥${n.toLocaleString('ja-JP')}`;
   };
 
   return (
@@ -402,20 +469,24 @@ export default function CasesPage() {
                 <th className="px-6 py-3">開始時期</th>
                 <th className="px-6 py-3">ステータス</th>
                 <th className="px-6 py-3">最終更新</th>
-                <th className="px-6 py-3">アクション</th>
               </tr>
             </thead>
             <tbody>
               {filteredCases.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-gray-400 text-sm">
+                  <td colSpan={7} className="px-6 py-12 text-center text-gray-400 text-sm">
                     登録された案件がありません。「案件を追加」から登録してください。
                   </td>
                 </tr>
               ) : filteredCases.map((c) => (
                 <tr key={c.id} className="border-b border-gray-100 hover:bg-gray-50">
                   <td className="px-6 py-4">
-                    <div className="font-medium text-gray-900">{c.title}</div>
+                    <button
+                      onClick={() => setSummaryCase(c)}
+                      className="font-medium text-indigo-600 hover:text-indigo-800 hover:underline text-left"
+                    >
+                      {c.title}
+                    </button>
                     {c.commercialFlow && <div className="text-xs text-gray-400 mt-1">{c.commercialFlow}</div>}
                   </td>
                   <td className="px-6 py-4 text-gray-700 whitespace-nowrap">{formatBudget(c.budget)}</td>
@@ -430,11 +501,6 @@ export default function CasesPage() {
                   <td className="px-6 py-4 text-xs text-gray-500 whitespace-nowrap">
                     {c.updatedAt ? new Date(c.updatedAt).toLocaleString('ja-JP', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—'}
                   </td>
-                  <td className="px-6 py-4">
-                    <button onClick={() => handleOpenEdit(c)} className="text-indigo-600 hover:text-indigo-900 font-medium text-sm flex items-center gap-1">
-                      <Pencil className="h-3.5 w-3.5" />詳細・編集
-                    </button>
-                  </td>
                 </tr>
               ))}
             </tbody>
@@ -442,8 +508,17 @@ export default function CasesPage() {
         </div>
       </div>
 
-      {/* 追加モーダル（3ステップ） */}
+      {/* 追加モーダル */}
       {showAddModal && <AddModal onClose={() => setShowAddModal(false)} onSave={handleAddSave} />}
+
+      {/* サマリーモーダル */}
+      {summaryCase && (
+        <SummaryModal
+          caseItem={summaryCase}
+          onClose={() => setSummaryCase(null)}
+          onEdit={() => handleOpenEdit(summaryCase)}
+        />
+      )}
 
       {/* 編集モーダル */}
       {editTarget && (
