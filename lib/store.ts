@@ -52,6 +52,7 @@ export type Candidate = {
   aiExperience: string;
   recommendationText: string;
   ngConditions: string;
+  interviewNote?: string;
   status: '可' | '保留' | '停止';
   skillSheet?: string;
   portfolio?: string;
