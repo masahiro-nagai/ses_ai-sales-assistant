@@ -42,6 +42,7 @@ export type Candidate = {
   location: string;
   availableFrom: string;
   conditions: string;
+  priceType: '時給' | '月給' | '準委任' | '';
   desiredPrice: string;
   strongArea: string;
   mainSkills: string;
