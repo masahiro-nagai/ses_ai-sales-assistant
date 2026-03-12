@@ -77,10 +77,37 @@ export type SendLog = {
   memo: string;
 };
 
+export type ProjectCase = {
+  id: string;
+  title: string;
+  description: string;
+  requiredSkills: string;
+  preferredSkills: string;
+  budget: string;           // 単価（上限）万円
+  settlementRange: string;  // 精算幅 (140h-180h)
+  workLocation: string;
+  workStyle: 'フルリモート' | '一部リモート' | '常駐' | '';
+  workDays: string;
+  workHours: string;
+  startDate: string;
+  period: string;
+  techStack: string;
+  commercialFlow: string;
+  interviewCount: string;
+  headcount: string;
+  paymentTerms: string;
+  ageLimit: string;
+  foreignOk: '可' | '不可' | '条件付き' | '';
+  memo: string;
+  status: '募集中' | '商談中' | '提案済み' | '終了';
+  updatedAt: string;
+};
+
 interface AppState {
   companies: Company[];
   candidates: Candidate[];
   logs: SendLog[];
+  cases: ProjectCase[];
   isInitialized: boolean;
   initializeListeners: () => void;
   addCompany: (company: Company) => Promise<void>;
@@ -92,12 +119,16 @@ interface AppState {
   addLog: (log: SendLog) => Promise<void>;
   updateLog: (id: string, log: Partial<SendLog>) => Promise<void>;
   deleteLog: (id: string) => Promise<void>;
+  addCase: (c: ProjectCase) => Promise<void>;
+  updateCase: (id: string, c: Partial<ProjectCase>) => Promise<void>;
+  deleteCase: (id: string) => Promise<void>;
 }
 
 export const useAppStore = create<AppState>()((set, get) => ({
   companies: [],
   candidates: [],
   logs: [],
+  cases: [],
   isInitialized: false,
 
   initializeListeners: () => {
@@ -120,6 +151,12 @@ export const useAppStore = create<AppState>()((set, get) => ({
       onSnapshot(logsQuery, (snapshot) => {
         const logs = snapshot.docs.map(doc => doc.data() as SendLog);
         set({ logs });
+      });
+
+      const casesQuery = query(collection(db, 'cases'));
+      onSnapshot(casesQuery, (snapshot) => {
+        const cases = snapshot.docs.map(doc => doc.data() as ProjectCase);
+        set({ cases });
       });
 
       set({ isInitialized: true });
@@ -223,6 +260,36 @@ export const useAppStore = create<AppState>()((set, get) => ({
     } catch (error) {
       console.error('Error deleting log:', error);
       set((state) => ({ logs: state.logs.filter((l) => l.id !== id) }));
+    }
+  },
+
+  addCase: async (c) => {
+    try {
+      await setDoc(doc(db, 'cases', c.id), c);
+    } catch (error) {
+      console.error('Error adding case:', error);
+      set((state) => ({ cases: [...state.cases, c] }));
+    }
+  },
+
+  updateCase: async (id, caseUpdate) => {
+    try {
+      const currentState = get().cases.find(c => c.id === id);
+      if (!currentState) return;
+      const updated = { ...currentState, ...caseUpdate, updatedAt: new Date().toISOString() };
+      await setDoc(doc(db, 'cases', id), updated, { merge: true });
+    } catch (error) {
+      console.error('Error updating case:', error);
+      set((state) => ({ cases: state.cases.map((c) => c.id === id ? { ...c, ...caseUpdate } : c) }));
+    }
+  },
+
+  deleteCase: async (id) => {
+    try {
+      await deleteDoc(doc(db, 'cases', id));
+    } catch (error) {
+      console.error('Error deleting case:', error);
+      set((state) => ({ cases: state.cases.filter((c) => c.id !== id) }));
     }
   },
 }));

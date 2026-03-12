@@ -3,13 +3,14 @@
 import Link from 'next/link';
 import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Building2, Users, Send, PenTool, Settings, HelpCircle } from 'lucide-react';
+import { LayoutDashboard, Building2, Users, Send, PenTool, Settings, HelpCircle, Briefcase } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 
 const navItems = [
   { name: 'ダッシュボード', href: '/', icon: LayoutDashboard },
   { name: '企業マスター', href: '/companies', icon: Building2 },
   { name: '候補者マスター', href: '/candidates', icon: Users },
+  { name: '案件マスター', href: '/cases', icon: Briefcase },
   { name: '送信ログ', href: '/logs', icon: Send },
   { name: 'メッセージ作成', href: '/messages/new', icon: PenTool },
   { name: '使い方', href: '/help', icon: HelpCircle },
