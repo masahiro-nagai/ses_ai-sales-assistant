@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import { useAppStore } from '@/lib/store';
-import { ProjectCase } from '@/lib/store';
+import { ProjectCase, Candidate } from '@/lib/store';
 import { parseCaseFromText } from '@/lib/gemini';
-import { Plus, Search, X, Pencil, Sparkles, Loader2, PenLine, ChevronRight } from 'lucide-react';
+import { Plus, Search, X, Pencil, Sparkles, Loader2, PenLine, ChevronRight, Users } from 'lucide-react';
 
 const emptyForm = (): Omit<ProjectCase, 'id' | 'updatedAt'> => ({
   title: '',
@@ -47,10 +47,12 @@ function SummaryModal({
   caseItem,
   onClose,
   onEdit,
+  onPropose,
 }: {
   caseItem: ProjectCase;
   onClose: () => void;
   onEdit: () => void;
+  onPropose: () => void;
 }) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -132,15 +134,23 @@ function SummaryModal({
         </div>
 
         {/* フッター */}
-        <div className="flex justify-between items-center px-6 pb-6">
+        <div className="flex justify-between items-center px-6 pb-6 gap-3 flex-wrap">
           <button onClick={onClose} className="px-4 py-2 text-sm border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">閉じる</button>
-          <button
-            onClick={onEdit}
-            className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-md font-medium flex items-center gap-2"
-          >
-            <Pencil className="h-4 w-4" />案件詳細・編集
-            <ChevronRight className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onPropose}
+              className="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-md font-medium flex items-center gap-2"
+            >
+              <Users className="h-4 w-4" />人材を提案
+            </button>
+            <button
+              onClick={onEdit}
+              className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-md font-medium flex items-center gap-2"
+            >
+              <Pencil className="h-4 w-4" />案件詳細・編集
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -413,13 +423,69 @@ function AddModal({ onClose, onSave }: { onClose: () => void; onSave: (form: Omi
 
 // ── メインページ ──
 export default function CasesPage() {
-  const { cases, addCase, updateCase } = useAppStore();
+  const { cases, candidates, addCase, updateCase, addProposal } = useAppStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [summaryCase, setSummaryCase] = useState<ProjectCase | null>(null);
   const [editTarget, setEditTarget] = useState<ProjectCase | null>(null);
   const [editForm, setEditForm] = useState<Omit<ProjectCase, 'id' | 'updatedAt'>>(emptyForm());
   const [editSaving, setEditSaving] = useState(false);
+
+  // 提案モーダル用 state
+  const [proposeCase, setProposeCase] = useState<ProjectCase | null>(null);
+  const [selectedCandidateId, setSelectedCandidateId] = useState('');
+  const [proposalMethod, setProposalMethod] = useState('');
+  const [proposalAmount, setProposalAmount] = useState('');
+  const [proposalMemo, setProposalMemo] = useState('');
+  const [generatedText, setGeneratedText] = useState('');
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [proposalSaving, setProposalSaving] = useState(false);
+
+  const handleOpenPropose = (c: ProjectCase) => {
+    setSummaryCase(null);
+    setProposeCase(c);
+    setSelectedCandidateId('');
+    setProposalMethod('');
+    setProposalAmount('');
+    setProposalMemo('');
+    setGeneratedText('');
+  };
+
+  const handleGenerateRecommendation = async () => {
+    const candidate = candidates.find(c => c.id === selectedCandidateId);
+    if (!candidate || !proposeCase) return;
+    setAiGenerating(true);
+    try {
+      const res = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'proposalRecommendation', payload: { caseItem: proposeCase, candidate } }),
+      });
+      const data = await res.json();
+      setGeneratedText(data.text || '');
+    } finally {
+      setAiGenerating(false);
+    }
+  };
+
+  const handleProposalSave = async () => {
+    if (!proposeCase || !selectedCandidateId) return;
+    setProposalSaving(true);
+    await addProposal({
+      id: crypto.randomUUID(),
+      caseId: proposeCase.id,
+      candidateId: selectedCandidateId,
+      status: '提案中',
+      writer: '',
+      proposalMethod,
+      proposalAmount,
+      recommendationText: generatedText,
+      memo: proposalMemo,
+      updatedAt: new Date().toISOString(),
+    });
+    setProposalSaving(false);
+    setProposeCase(null);
+  };
 
   const filteredCases = cases.filter(c =>
     c.title.includes(searchTerm) || c.requiredSkills.includes(searchTerm) || c.techStack.includes(searchTerm)
@@ -527,6 +593,7 @@ export default function CasesPage() {
           caseItem={summaryCase}
           onClose={() => setSummaryCase(null)}
           onEdit={() => handleOpenEdit(summaryCase)}
+          onPropose={() => handleOpenPropose(summaryCase)}
         />
       )}
 
@@ -546,6 +613,81 @@ export default function CasesPage() {
               <button onClick={() => setEditTarget(null)} className="px-4 py-2 text-sm border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">キャンセル</button>
               <button onClick={handleEditSubmit} disabled={editSaving || !editForm.title.trim()} className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-md font-medium disabled:opacity-50">
                 {editSaving ? '保存中...' : '変更を保存'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 人材提案モーダル */}
+      {proposeCase && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[92vh] overflow-y-auto">
+            <div className="flex justify-between items-center p-6 border-b border-gray-100">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">人材を提案</h2>
+                <p className="text-xs text-gray-500 mt-0.5">{proposeCase.title}</p>
+              </div>
+              <button onClick={() => setProposeCase(null)} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              {/* 人材選択 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">人材を選択 *</label>
+                <select value={selectedCandidateId} onChange={e => setSelectedCandidateId(e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                  <option value="">候補者を選択してください</option>
+                  {candidates.map(c => <option key={c.id} value={c.id}>{c.name}（{c.type || 'その他'}）</option>)}
+                </select>
+              </div>
+
+              {/* AI推薦文生成 */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm font-medium text-gray-700">推薦文</label>
+                  <button type="button" onClick={handleGenerateRecommendation}
+                    disabled={!selectedCandidateId || aiGenerating}
+                    className="flex items-center gap-1 text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-md disabled:opacity-50">
+                    {aiGenerating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                    {aiGenerating ? 'AI生成中...' : 'AI推薦文を生成'}
+                  </button>
+                </div>
+                {!selectedCandidateId && <p className="text-xs text-gray-400 mb-1">人材を選択するとAI推薦文を生成できます</p>}
+                {selectedCandidateId && !generatedText && !aiGenerating && (
+                  <p className="text-xs text-amber-600 mb-1">「AI推薦文を生成」ボタンで案件×面談議事録から推薦文を自動生成します</p>
+                )}
+                <textarea value={generatedText} onChange={e => setGeneratedText(e.target.value)} rows={10}
+                  placeholder="AIが生成した推薦文がここに表示されます。直接編集もできます。"
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              </div>
+
+              {/* 提案方法 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">提案方法</label>
+                <input type="text" value={proposalMethod} onChange={e => setProposalMethod(e.target.value)} placeholder="例: メール、電話"
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              </div>
+
+              {/* 提案金額 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">提案金額</label>
+                <input type="text" value={proposalAmount} onChange={e => setProposalAmount(e.target.value)} placeholder="例: 月80万円"
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              </div>
+
+              {/* メモ */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">メモ</label>
+                <textarea value={proposalMemo} onChange={e => setProposalMemo(e.target.value)} rows={3}
+                  placeholder="補足情報など..."
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 px-6 pb-6">
+              <button onClick={() => setProposeCase(null)} className="px-4 py-2 text-sm border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">キャンセル</button>
+              <button onClick={handleProposalSave} disabled={proposalSaving || !selectedCandidateId}
+                className="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-md font-medium disabled:opacity-50">
+                {proposalSaving ? '保存中...' : '提案を登録'}
               </button>
             </div>
           </div>

@@ -283,6 +283,57 @@ HR Tech SaaSにおける開発経験：物流DXの自社サービス開発と親
                 break;
             }
 
+            case 'proposalRecommendation': {
+                const { caseItem, candidate } = payload;
+                const prompt = `
+あなたはSES/IT人材エージェントの提案文作成のプロです。
+以下の【案件情報】と【候補者の面談議事録】を突き合わせて、この案件に特化した推薦文を3パターン作成してください。
+
+【案件情報】
+- 案件名: ${caseItem.title}
+- 業務内容: ${caseItem.description}
+- 必須スキル: ${caseItem.requiredSkills}
+- 尚可スキル: ${caseItem.preferredSkills}
+- 技術スタック: ${caseItem.techStack}
+- 単価: ${caseItem.budget ? '¥' + parseInt(caseItem.budget, 10).toLocaleString('ja-JP') : '不明'}
+- 稼働形態: ${caseItem.workStyle}
+
+【候補者情報】
+- 氏名/イニシャル: ${candidate.name}
+- 種別: ${candidate.type}
+- 得意領域: ${candidate.strongArea}
+- 主要スキル: ${candidate.mainSkills}
+- 実績1: ${candidate.achievement1}
+- 実績2: ${candidate.achievement2}
+- 対顧客強み: ${candidate.customerStrength}
+- AI関連経験: ${candidate.aiExperience}
+
+【面談議事録】
+${candidate.interviewNote || '（議事録なし）'}
+
+【既存推薦文（参考）】
+${candidate.recommendationText || '（なし）'}
+
+【推薦文スタイル参考】
+スタイル1（箇条書き詳細型）: 候補者の強みを箇条書きで3〜5項目詳述する。
+スタイル2（ストーリー型）: 候補者の経歴の流れを段落形式で自然に語る。
+スタイル3（アピールポイント型）: 箇条書き＋【アピールポイント】セクションで案件との親和性を強調する。
+
+【出力ルール】
+- 3パターンを【パターン1】【パターン2】【パターン3】のヘッダーから始める
+- 各パターンで案件の必須スキルや業務内容と候補者スキルを紐付けて説明する
+- 「この案件にとってなぜこの候補者が最適か」が伝わる文章にする
+- 議事録や候補者情報にない内容は盛らない
+- そのまま営業メールに使えるクオリティで作成する
+`;
+                const response = await ai.models.generateContent({
+                    model: 'gemini-3.1-flash-lite-preview',
+                    contents: prompt,
+                });
+                resultText = response.text || '';
+                break;
+            }
+
             case 'parseCase': {
                 const { summaryText } = payload;
                 const prompt = `
