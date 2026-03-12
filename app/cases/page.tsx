@@ -114,6 +114,14 @@ function SummaryModal({
             </div>
           )}
 
+          {/* 開発環境・技術スタック */}
+          {caseItem.techStack && (
+            <div>
+              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">開発環境・技術スタック</div>
+              <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{caseItem.techStack}</p>
+            </div>
+          )}
+
           {/* 備考 */}
           {caseItem.memo && (
             <div className="bg-yellow-50 border border-yellow-100 rounded-lg p-3">
@@ -481,13 +489,15 @@ export default function CasesPage() {
               ) : filteredCases.map((c) => (
                 <tr key={c.id} className="border-b border-gray-100 hover:bg-gray-50">
                   <td className="px-6 py-4">
+                    <div className="font-medium text-gray-900">{c.title}</div>
+                    {c.commercialFlow && <div className="text-xs text-gray-400 mt-0.5">{c.commercialFlow}</div>}
                     <button
+                      type="button"
                       onClick={() => setSummaryCase(c)}
-                      className="font-medium text-indigo-600 hover:text-indigo-800 hover:underline text-left"
+                      className="text-xs text-indigo-600 hover:underline mt-1 block"
                     >
-                      {c.title}
+                      詳細を見る
                     </button>
-                    {c.commercialFlow && <div className="text-xs text-gray-400 mt-1">{c.commercialFlow}</div>}
                   </td>
                   <td className="px-6 py-4 text-gray-700 whitespace-nowrap">{formatBudget(c.budget)}</td>
                   <td className="px-6 py-4 text-gray-700 text-xs">{c.workStyle || '—'}</td>

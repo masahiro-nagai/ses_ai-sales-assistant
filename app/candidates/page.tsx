@@ -455,13 +455,15 @@ export default function CandidatesPage() {
               {filteredCandidates.map((candidate) => (
                 <tr key={candidate.id} className="border-b border-gray-100 hover:bg-gray-50">
                   <td className="px-6 py-4">
+                    <div className="font-medium text-gray-900">{candidate.name}</div>
+                    <div className="text-xs text-gray-500 mt-0.5">{candidate.type}</div>
                     <button
+                      type="button"
                       onClick={() => setSummaryCandidate(candidate)}
-                      className="font-medium text-indigo-600 hover:text-indigo-800 hover:underline text-left"
+                      className="text-xs text-indigo-600 hover:underline mt-1 block"
                     >
-                      {candidate.name}
+                      詳細を見る
                     </button>
-                    <div className="text-xs text-gray-500 mt-1">{candidate.type}</div>
                   </td>
                   <td className="px-6 py-4 text-gray-700 text-xs">{candidate.location || '—'}</td>
                   <td className="px-6 py-4 text-gray-700">{candidate.strongArea}</td>
